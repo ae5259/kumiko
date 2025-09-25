@@ -1,36 +1,59 @@
 import { bot } from "../../config/bot.ts";
-import { Response } from "../../types/response.ts";
 import { unWarnUser } from "../../db/warns.ts";
 import {
   isAdmin,
-  isReplying,
   isReplyingToAdmin,
   isReplyingToMe,
 } from "../../utils/detect.ts";
-import { Context } from "../../deps.ts";
+import { MyContext } from "../../types/context.ts";
 
 // Function to handle the unwarning logic
-async function handleUnwarn(ctx: Context): Promise<void> {
-  const userId = ctx.message?.reply_to_message?.from?.id as number;
-  const response: Response = await unWarnUser(userId);
+// deno-lint-ignore no-explicit-any
+async function handleUnwarn(ctx: MyContext): Promise<any> {
+  const reply_to_message = ctx.message?.reply_to_message;
+
+  if (reply_to_message == undefined) {
+    await ctx.reply(ctx.t("reply-to-message"));
+    return;
+  }
+
+  const replied_user = reply_to_message.from;
+
+  if (replied_user == undefined) {
+    return;
+  }
+
+  if (isReplyingToMe(ctx)) {
+    return await ctx.reply(ctx.t("should-i-unwarn-myself"));
+  }
+
+  if (await isReplyingToAdmin(ctx)) {
+    return await ctx.reply(ctx.t("i-cant-unwarn-admins"));
+  }
+
+  if (replied_user == undefined) {
+    return;
+  }
+
+  const userId = replied_user.id as number;
+  const response = await unWarnUser(userId);
 
   if (response.status === 200) {
-    const text =
-      `${response.message}\nThe user: ${ctx.message?.reply_to_message?.from?.first_name}`;
+    const text = ctx.t("unwarn-success", {
+      message: response.message,
+      user_name: ctx.message?.reply_to_message?.from?.first_name ?? "",
+    });
     await ctx.reply(text);
   }
 }
 
 bot
-  .filter(async (ctx) => await isAdmin(ctx))
-  .filter(async (ctx) => await isReplying(ctx))
-  .filter(async (ctx) => await !isReplyingToMe(ctx))
-  .filter(async (ctx) => !await isReplyingToAdmin(ctx))
-  .command("unwarn", async (ctx) => {
+  .filter(async (ctx: MyContext) => await isAdmin(ctx))
+  .command("unwarn", async (ctx: MyContext) => {
     try {
       await handleUnwarn(ctx);
     } catch (error) {
       console.error("Error handling unwarn:", error);
-      await ctx.reply("An error occurred while processing the unwarn.");
+      await ctx.reply(ctx.t("unwarn-error"));
     }
   });

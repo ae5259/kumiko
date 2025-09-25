@@ -10,8 +10,8 @@ tool for Telegram groups.
 
 - Utilizes the Shikimori API to fetch anime details
 - Two ways to search for anime:
-  1. Inline mode: `@kumikorobot anime name`
-  2. Command: `/anime anime name`
+  1. Inline mode: `@kumikorobot name`
+  2. Command: `/anime name`
 
 ### Moderation Commands
 
@@ -37,6 +37,7 @@ Remember: Three strikes and they're out! (3 warnings = automatic ban)
 ### Additional Features
 
 - Currency exchange functionality
+- Post Github Webhook Updates in a Group
 
 ## Technology Stack
 
@@ -102,13 +103,79 @@ cd kumiko
 4. Run the bot locally:
 
 ```bash
-deno run --allow-net mod.ts
+deno run -A --env --unstable-kv mod.ts
 ```
+
+### Explanation
+
+- `-A` - Allow all, in case we need access, in our case, we need access to
+  network, kv and env variables, so instead of typing all of that I simply use
+  this flag, the project doesn't have suspicious dependency or piece of code.
+- `--env` - It is required to read env variables by Deno.
+- `--unstable-kv` - As of know, as far as I know, KV feature is unstable, so it
+  requires a special flag to use Deno KV.
 
 ## Deployment
 
-Kumiko is deployed using Deno Deploy. For deployment instructions, refer to the
-[Deno Deploy documentation](https://deno.com/deploy/docs).
+Kumiko can be easily deployed using Deno Deploy. You will need to have a Deno
+Deploy account. Visit the [website](https://deno.dev) and sign up.
+
+First, fork this repository by clicking **Fork** button or
+[this link](https://github.com/openexis/kumiko/fork).
+
+### In Deno Deploy Dashboard, click on New Project:
+
+<img src="https://i.imgur.com/GWL9BBK.png">
+
+### Then choose the repository by searching.
+
+<img src="https://i.imgur.com/YmdYcCs.png" width=600>
+
+### Choose the branch and the entrypoint, then, click the `Deploy Project` button.
+
+<img src="https://i.imgur.com/GLlymGU.png">
+<img src="https://i.imgur.com/RoqS9bl.png">
+
+### In the first try, you'll see an error.
+
+<img src="https://i.imgur.com/X39nKfq.png">
+
+### You can see the rror by click on `View Logs`.
+
+<img src="https://i.imgur.com/4PgRTvq.png">
+
+### Which clearly tells you to set environment variables. Now click on `Settings`
+
+<img src="https://i.imgur.com/ovhIwXH.png">
+
+### Then set the environment variables like in example.
+
+- Get your token from [BotFather](https://t.me/botfather)
+- `HOST` should be set to `WEBHOOK`
+- Optionally, set your organization name
+
+<img src="https://i.imgur.com/FsHUIQ2.png">
+
+### After setting environmental variables, unlink and relink the GitHub repository.
+
+<img src="https://i.imgur.com/iDCktVD.png">
+<img src="https://i.imgur.com/HFpk3Ul.png">
+
+### Then click on `Deploy Project`
+
+### If you see this, your project is successfully deployed.
+
+<img src="https://i.imgur.com/sZftSi6.png">
+
+### Then copy your project URL, in my case `https://akumarujon-kumiko-86.deno.dev/`. Then navigate to `/webhook` route on browser.
+
+### If you see the same, message your bot is running.
+
+<img src="https://i.imgur.com/1aDnvzF.png">
+
+### It works.
+
+<img src="https://i.imgur.com/rvX7vsd.png">
 
 ## Contributing
 
@@ -117,5 +184,5 @@ create issues or spread the word.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for
-details.
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE)
+file for details.

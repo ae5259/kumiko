@@ -1,18 +1,41 @@
 import { bot } from "../../config/bot.ts";
-import { Response } from "../../types/response.ts";
 import { clearWarns, warnUser } from "../../db/warns.ts";
 import {
   isAdmin,
-  isReplying,
   isReplyingToAdmin,
   isReplyingToMe,
 } from "../../utils/detect.ts";
-import { Context } from "../../deps.ts";
+import { MyContext } from "../../types/context.ts";
 
 // Function to handle the warning logic
-async function handleWarning(ctx: Context): Promise<void> {
-  const userId = ctx.message?.reply_to_message?.from?.id as number; // Type assertion for clarity
-  const response: Response = await warnUser(userId);
+// deno-lint-ignore no-explicit-any
+async function handleWarning(ctx: MyContext): Promise<any> {
+  const reply_to_message = ctx.message?.reply_to_message;
+
+  if (reply_to_message == undefined) {
+    await ctx.reply(ctx.t("reply-to-message"));
+    return;
+  }
+
+  const replied_user = reply_to_message.from;
+
+  if (replied_user == undefined) {
+    return;
+  }
+
+  if (isReplyingToMe(ctx)) {
+    return await ctx.reply(ctx.t("should-i-warn-myself"));
+  }
+
+  if (await isReplyingToAdmin(ctx)) {
+    return await ctx.reply(ctx.t("i-cant-warn-admins"));
+  }
+
+  if (replied_user == undefined) {
+    return;
+  }
+  const userId = replied_user.id;
+  const response = await warnUser(userId);
 
   const warnsCount = parseInt(response.message.match(/\d+/g)?.[0] || "0"); // Extract warns count safely
 
@@ -21,28 +44,30 @@ async function handleWarning(ctx: Context): Promise<void> {
     await clearWarns(userId);
     await ctx.api.sendMessage(
       ctx.message?.chat.id as number,
-      `The user ${ctx.message?.reply_to_message?.from?.first_name} has reached 3 warns and has been banned.`,
+      ctx.t("user-banned-after-3-warns", {
+        user_name: replied_user.first_name,
+      }),
+      { message_thread_id: ctx.message?.message_thread_id },
     );
     return;
   }
 
   if (response.status === 200) {
-    const text =
-      `${response.message}\nThe user: ${ctx.message?.reply_to_message?.from?.first_name}`;
+    const text = ctx.t("warn-success", {
+      message: response.message,
+      user_name: replied_user.first_name,
+    });
     await ctx.reply(text);
   }
 }
 
 bot
   .filter(async (ctx) => await isAdmin(ctx)) // Check if the user is an admin
-  .filter(async (ctx) => await isReplying(ctx)) // Check if replying to a message
-  .filter(async (ctx) => await !isReplyingToMe(ctx)) // Check if not replying to self
-  .filter(async (ctx) => !await isReplyingToAdmin(ctx)) // Check if not replying to admin
   .command("warn", async (ctx) => {
     try {
       await handleWarning(ctx);
     } catch (error) {
       console.error("Error handling warning:", error);
-      await ctx.reply("An error occurred while processing the warning.");
+      await ctx.reply(ctx.t("warn-error"));
     }
   });

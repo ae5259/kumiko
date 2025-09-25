@@ -1,6 +1,5 @@
 import { Response } from "../types/response.ts";
-
-const kv = await Deno.openKv();
+import { kv } from "../config/kv.ts";
 
 async function clearWarns(user_id: string | number): Promise<Response> {
   await kv.delete(["warns", user_id.toString()]);
@@ -11,9 +10,10 @@ async function clearWarns(user_id: string | number): Promise<Response> {
 }
 
 async function warnUser(user_id: string | number): Promise<Response> {
-  const data = await kv.get(["warns", user_id.toString()]);
+  const data = await kv.get<number>(["warns", user_id.toString()]);
   // Check if data exists
-  if (new Boolean(data.value)) {
+
+  if (data.value) {
     let warns_count: number = data.value as number;
     warns_count = ++warns_count;
     kv.set(["warns", user_id.toString()], warns_count);
@@ -32,10 +32,10 @@ async function warnUser(user_id: string | number): Promise<Response> {
 }
 
 async function unWarnUser(user_id: string | number): Promise<Response> {
-  const data = await kv.get(["warns", user_id.toString()]);
+  const data = await kv.get<number>(["warns", user_id.toString()]);
 
   // Check if data exists
-  if (new Boolean(data.value)) {
+  if (data.value) {
     let warns_count: number = data.value as number;
     warns_count = --warns_count;
     await kv.set(["warns", user_id.toString()], warns_count);
